@@ -60,7 +60,6 @@ export function createGame(options = {}) {
   const subscribers = new Set();
   /** @type {Promise|null} */
   let loop = null;
-  let pendingClick = null;
 
   function snapshot() {
     return {
@@ -167,7 +166,6 @@ export function createGame(options = {}) {
       else {
         setState(STATE.IDLE);
         emit();
-        drainPendingClicks();
       }
       return;
     }
@@ -185,18 +183,11 @@ export function createGame(options = {}) {
     }
     setState(STATE.IDLE);
     emit();
-    drainPendingClicks();
-  }
-
-  function drainPendingClicks() {
-    if (!pendingClick) return;
-    const { r, c, resolve } = pendingClick;
-    pendingClick = null;
-    resolve(handleClick(r, c));
   }
 
   /**
    * Player click. Only accepted in IDLE with energy > 0.
+   * Non-IDLE states reject immediately with `locked` (no input queue).
    * @returns {Promise<{ok:boolean, reason?:string, snapshot:object}>}
    */
   function handleClick(r, c) {
@@ -264,12 +255,7 @@ export function createGame(options = {}) {
   }
 
   function click(r, c) {
-    // Serialize: if machine is busy, queue the latest click until IDLE
-    if (state !== STATE.IDLE && !gameOver) {
-      return new Promise((resolve) => {
-        pendingClick = { r, c, resolve };
-      });
-    }
+    // S2.6 rule 1: only IDLE accepts clicks; otherwise immediate {ok:false, reason:'locked'}
     return handleClick(r, c);
   }
 
@@ -284,7 +270,6 @@ export function createGame(options = {}) {
     gameOver = false;
     degraded = false;
     chainDepth = 0;
-    pendingClick = null;
     loop = null;
     emit();
   }

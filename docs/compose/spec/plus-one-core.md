@@ -72,7 +72,7 @@ P(v)     = weight(v) / Σ weight(k), k ∈ [1, maxSpawn]
 ```js
 /**
  * @typedef {Object} GravityResult
- * @property {{id:number,fromRow:number,toRow:number,col:number,val:number}[]} moves
+ * @property {{id:number,fromRow:number,toRow:number,col:number,val:number,dropDistance:number}[]} moves
  * @property {{row:number,col:number,id:number,val:number,spawnFromRow:number}[]} spawns
  */
 ```
@@ -115,7 +115,7 @@ MERGE ──动画完──► GRAVITY ──掉落完──► AUTO_CHECK
 
 规则要点：
 
-1. **输入锁**：仅 `IDLE` 接受点击；`state !== IDLE` 时 `click()` 返回 `{ok:false, reason:'locked'}`
+1. **输入锁**：仅 `IDLE` 接受点击；`state !== IDLE` 时 `click()` **立即**返回 `{ok:false, reason:'locked'}`（禁止排队/挂起）
 2. **体力**：点击扣 `energy -= 1` 并立即刷新快照；每次 MERGE 成功返还 `+1`（上限 5）
 3. **连锁**：`AUTO_CHECK` 发现的合并不扣体力，但走同一 MERGE 结算（含返还与计分），`comboCount` 累加
 4. **结束条件**：仅两处进入 `GAME_OVER`——(a) 点击后 N<3 且 energy==0；(b) AUTO_CHECK 无合并且 energy==0
@@ -141,15 +141,15 @@ src/constants.js   — ROWS/COLS/MAX_ENERGY/STATE
 src/board.js       — createBoard, cloneBoard, bfsBlock, pickAutoMerge,
                      computeGravity, spawnValue, fillEmptySpawn, findMaxMin
 src/game.js        — createGame({rng, hooks}) → { click, getState, getSnapshot,
-                     board, reset, subscribe }
+                     getBoard, reset, subscribe }
 ```
 
-`createGame` 返回可序列化快照：
+`createGame` 返回可序列化快照（经 `getSnapshot()`）：
 
 ```js
 {
   state, board, energy, score, comboCount,
-  lastMerge: null | { center, N, mergeVal, gained, combo },
+  lastMerge: null | { center, N, mergeVal, gained, combo, trigger },
   lastGravity: null | GravityResult,
   gameOver: boolean,
   degraded: boolean

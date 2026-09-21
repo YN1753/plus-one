@@ -105,7 +105,7 @@ test('merge path: N>=3 scores N*mergeVal*20, refunds energy, upgrades center', a
   assert.ok(found4, 'expected upgraded val 4 on board after gravity');
 });
 
-test('input locked during animation chain', async () => {
+test('input locked: non-IDLE click returns {ok:false, reason:locked}', async () => {
   resetCellIds(1);
   let resolveMerge;
   const mergeGate = new Promise((resolve) => {
@@ -130,26 +130,22 @@ test('input locked during animation chain', async () => {
   board[4][2] = createCell(3);
 
   const p = game.click(4, 1);
-  // Immediately try another click — should queue or reject
   await Promise.resolve();
   assert.notEqual(game.getState(), STATE.IDLE);
-  const blocked = await Promise.race([
-    game.click(0, 0),
-    new Promise((r) => setTimeout(() => r({ ok: false, reason: 'still_locked' }), 20)),
-  ]);
-  // Either queued (ok once merge finishes) or still locked — if still_locked, merge not done
-  // Release merge
+
+  // Must reject immediately — not queue, not hang
+  const blocked = await game.click(0, 0);
+  assert.equal(blocked.ok, false);
+  assert.equal(blocked.reason, 'locked');
+
   resolveMerge();
   const first = await p;
   assert.equal(first.ok, true);
-  // queued click may complete
-  if (blocked.reason === 'still_locked') {
-    assert.ok(true);
-  } else {
-    // queued click resolved after unlock
-    assert.ok(blocked.ok === true || blocked.reason === 'locked' || blocked.reason === 'still_locked');
-  }
   assert.equal(game.getState(), STATE.IDLE);
+
+  // After settle, clicks are accepted again
+  const after = await game.click(0, 0);
+  assert.notEqual(after.reason, 'locked');
 });
 
 test('game over when energy hits 0 without merge', async () => {

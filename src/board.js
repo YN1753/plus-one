@@ -198,23 +198,14 @@ export function computeGravity(board, rng = Math.random) {
     for (const { fromRow, cell } of survivors) {
       cell.isMerged = false;
       next[writeRow][c] = cell;
-      if (writeRow !== fromRow) {
-        moves.push({
-          id: cell.id,
-          fromRow,
-          toRow: writeRow,
-          col: c,
-          val: cell.val,
-        });
-      } else {
-        moves.push({
-          id: cell.id,
-          fromRow,
-          toRow: writeRow,
-          col: c,
-          val: cell.val,
-        });
-      }
+      moves.push({
+        id: cell.id,
+        fromRow,
+        toRow: writeRow,
+        col: c,
+        val: cell.val,
+        dropDistance: writeRow - fromRow,
+      });
       writeRow--;
     }
 

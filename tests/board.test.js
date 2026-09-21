@@ -160,6 +160,8 @@ test('computeGravity: survivors sink, order preserved, spawns fill top', () => {
   assert.equal(upper.toRow, 3);
   assert.equal(lower.toRow, 4);
   assert.equal(lower.toRow - lower.fromRow, 2);
+  assert.equal(lower.dropDistance, 2);
+  assert.equal(upper.dropDistance, 2);
 
   const col0Spawns = spawns.filter((s) => s.col === 0);
   assert.equal(col0Spawns.length, 3);
