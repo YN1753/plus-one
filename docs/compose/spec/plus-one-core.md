@@ -1,14 +1,25 @@
 ---
 feature: plus-one-core
-status: in-progress
+status: delivered
 updated: 2026-09-21
 branch: feature/plus-one-core
-commits: 3089066..3089066
+commits: 3089066..13ede172
 ---
 
 # 数字加1 核心业务逻辑
 
 ## Report
+
+**What was built** — 交付了《数字加1》的可独立测试核心控制模块：5×5 棋盘（`id/val/isMerged`）、四向 BFS 连通合成（N≥3）、列重力压紧与顶部补块、动态生成范围 `[1, max(3,MaxVal-3)]` 及倒加权分布，以及无死锁 FSM（IDLE→USER_ACTION→MERGE→GRAVITY→AUTO_CHECK→IDLE/GAME_OVER）。点击扣体力、合成返还并按 `N × mergeVal × 20` 计分；非 IDLE 的 `click()` 立即返回 `{ok:false, reason:'locked'}`。另附浏览器演示页与 GitHub Actions Pages 工作流（先 `npm test` 再部署 `index.html`+`src/`）。
+
+**Verification** — `npm test` → PASS 21/21；`npm run typecheck`（`node --check src/*.js`）→ PASS；烟雾：`createGame` + 非 IDLE 点击返回 `{ok:false,reason:'locked'}`，settle 后回到 IDLE。独立审查两轮：首轮 critical×2（输入锁排队、测试过松）已修复；复审 critical=0。
+
+**Journey log** —
+1. 空仓库先 `git init` + origin/main 骨架，实现落在 worktree `feature/plus-one-core`。
+2. 计分取合并前 `mergeVal`（经用户确认），而非「先 +1 再计分」的字面顺序。
+3. spawn 起点方向曾写反（顶部 empty 的 `spawnFromRow` 应最负），按掉落栈语义修正为 `-1-i`。
+4. 审查指出「排队等待」违反 S2.6 输入锁契约；改为立即 `locked` 拒绝，并收紧测试断言。
+5. Pages 为追加范围（S4）：零依赖静态站，workflow 在测试通过后才 upload/deploy。
 
 ## [S1] Problem
 
@@ -209,12 +220,12 @@ Hooks（全部可选，缺省瞬时 resolve）：
 
 ## Tasks
 
-- [ ] T1: 搭建 package 骨架与常量模块 — acceptance: `src/constants.js` 导出 STATE/ROWS/COLS/MAX_ENERGY，node 可 import (covers: S2.1,S2.6)
-- [ ] T2: 实现 board 数据与 BFS 连通块 — acceptance: 四向 BFS 正确返回连通块；N≥3 判定；对角线不连通 (covers: S2.1,S2.2)
-- [ ] T3: 实现动态生成与倒加权 spawn — acceptance: 空盘 range[1,3]；有 MaxVal 时 range=[1,max(3,MaxVal-3)]；小数字概率显著更高（可注入 rng 验证） (covers: S2.3)
-- [ ] T4: 实现重力压紧与补块 — acceptance: 列内沉底相对顺序不变；dropDistance/spawns 字段正确；顶部补块用 spawn 算法 (covers: S2.4)
-- [ ] T5: 实现 FSM 控制器 createGame — acceptance: IDLE→USER_ACTION→MERGE→GRAVITY→AUTO_CHECK→IDLE/GAME_OVER 完整流转；非 IDLE 拒绝点击；energy/score/combo 符合公式 (covers: S2.5,S2.6,S2.8)
-- [ ] T6: 聚合中心选取规则 — acceptance: 点击触发用 (r,c)；连锁用 max-row / 近中心 col (covers: S2.5,S2.7)
-- [ ] T7: 单元测试覆盖算法与状态机 — acceptance: `npm test` 全绿，覆盖 BFS/生成/重力/计分/连锁/GAME_OVER/输入锁 (covers: S2.2,S2.3,S2.4,S2.5,S2.6,S2.7)
-- [ ] T8: GitHub Actions Pages 托管 + 可玩演示页 — acceptance: workflow 在 push main 时先 npm test 再部署 _site；index.html 可玩并调用 createGame (covers: S4)
-- [ ] T9: 独立审查与规格 finalize — acceptance: 审查通过 critical=0，spec status=delivered (covers: S2,S4)
+- [x] T1: 搭建 package 骨架与常量模块 — acceptance: `src/constants.js` 导出 STATE/ROWS/COLS/MAX_ENERGY，node 可 import (covers: S2.1,S2.6)
+- [x] T2: 实现 board 数据与 BFS 连通块 — acceptance: 四向 BFS 正确返回连通块；N≥3 判定；对角线不连通 (covers: S2.1,S2.2)
+- [x] T3: 实现动态生成与倒加权 spawn — acceptance: 空盘 range[1,3]；有 MaxVal 时 range=[1,max(3,MaxVal-3)]；小数字概率显著更高（可注入 rng 验证） (covers: S2.3)
+- [x] T4: 实现重力压紧与补块 — acceptance: 列内沉底相对顺序不变；dropDistance/spawns 字段正确；顶部补块用 spawn 算法 (covers: S2.4)
+- [x] T5: 实现 FSM 控制器 createGame — acceptance: IDLE→USER_ACTION→MERGE→GRAVITY→AUTO_CHECK→IDLE/GAME_OVER 完整流转；非 IDLE 拒绝点击；energy/score/combo 符合公式 (covers: S2.5,S2.6,S2.8)
+- [x] T6: 聚合中心选取规则 — acceptance: 点击触发用 (r,c)；连锁用 max-row / 近中心 col (covers: S2.5,S2.7)
+- [x] T7: 单元测试覆盖算法与状态机 — acceptance: `npm test` 全绿，覆盖 BFS/生成/重力/计分/连锁/GAME_OVER/输入锁 (covers: S2.2,S2.3,S2.4,S2.5,S2.6,S2.7)
+- [x] T8: GitHub Actions Pages 托管 + 可玩演示页 — acceptance: workflow 在 push main 时先 npm test 再部署 _site；index.html 可玩并调用 createGame (covers: S4)
+- [x] T9: 独立审查与规格 finalize — acceptance: 审查通过 critical=0，spec status=delivered (covers: S2,S4)
