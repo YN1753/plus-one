@@ -1,11 +1,27 @@
 # 数字加1（plusOne）
 
-益智消除游戏《数字加1》核心业务逻辑模块。
+益智消除游戏《数字加1》核心业务逻辑与 GitHub Pages 演示。
 
-- 5×5 棋盘
-- 正交连通块 BFS 合成（N ≥ 3）
-- 重力掉落与顶部补块
-- 动态生成范围 + 倒加权分布
-- 有限状态机：IDLE → USER_ACTION → MERGE → GRAVITY → AUTO_CHECK
+## 玩法
 
-核心代码位于 `src/`，规格见 `docs/compose/spec/plus-one-core.md`。
+- 5×5 棋盘，点击方块 `val += 1` 并消耗 1 点体力
+- 上下左右正交相连的同数方块 **N ≥ 3** 时合成
+- 合成：中心 `val + 1`，体力 +1（上限 5），`score += N × val × 20`
+- 重力掉落 + 动态生成；连锁合成不耗体力
+
+## 开发
+
+```bash
+npm test          # node:test 单元测试
+npm run typecheck # 语法检查
+```
+
+核心代码：`src/`  
+规格：`docs/compose/spec/plus-one-core.md`  
+演示入口：`index.html`（ESM，直接打开或经 Pages 托管）
+
+## 部署
+
+推送到 `main` 后，`.github/workflows/pages.yml` 会跑测试并部署到 GitHub Pages。
+
+仓库 Settings → Pages → Source 请选择 **GitHub Actions**。
