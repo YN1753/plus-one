@@ -28,20 +28,21 @@ function setBoard(spec) {
   return board;
 }
 
-test('spawnUpper: empty board uses [1,3] upper', () => {
-  assert.equal(spawnUpper(null), 3);
-  assert.equal(spawnUpper(2), 3);
-  assert.equal(spawnUpper(5), 3);
-  assert.equal(spawnUpper(6), 3);
-  assert.equal(spawnUpper(7), 4);
-  assert.equal(spawnUpper(10), 7);
+test('spawnUpper: harder opening — floor 4, decay 2', () => {
+  assert.equal(spawnUpper(null), 4);
+  assert.equal(spawnUpper(2), 4);
+  assert.equal(spawnUpper(5), 4);
+  assert.equal(spawnUpper(6), 4);
+  assert.equal(spawnUpper(7), 5);
+  assert.equal(spawnUpper(10), 8);
+  // legacy softer? explicit opts can raise floor further
+  assert.equal(spawnUpper(3, { floor: 5 }), 5);
 });
 
 test('spawnValue inverse-weight: low values more frequent', () => {
-  const upper = spawnUpper(10); // 7
+  const upper = spawnUpper(10); // 8
   const counts = new Map();
   const n = 7000;
-  // deterministic LCG
   let s = 42;
   const rng = () => {
     s = (s * 1664525 + 1013904223) >>> 0;
@@ -53,7 +54,6 @@ test('spawnValue inverse-weight: low values more frequent', () => {
     counts.set(v, (counts.get(v) || 0) + 1);
   }
   assert.ok(counts.get(1) > counts.get(upper), `1 (${counts.get(1)}) should > ${upper} (${counts.get(upper)})`);
-  // monotone-ish: P(1) > P(2) > P(3)
   assert.ok(counts.get(1) > counts.get(2));
   assert.ok(counts.get(2) > counts.get(3));
 });
@@ -180,15 +180,53 @@ test('computeGravity on full board: no spawns for solid columns', () => {
   assert.equal(spawns.length, 0);
 });
 
-test('findMaxMin on empty is null; fillEmptySpawn uses [1,3]', () => {
+test('findMaxMin on empty is null; opening bag uses [1,4] without ready triples', () => {
   const empty = createEmptyBoard();
   assert.deepEqual(findMaxMin(empty), { maxVal: null, minVal: null });
-  const filled = fillEmptySpawn(empty, () => 0.5);
-  for (let r = 0; r < ROWS; r++) {
-    for (let c = 0; c < COLS; c++) {
-      assert.ok(filled[r][c].val >= 1 && filled[r][c].val <= 3);
+
+  // Multiple seeds: opening must not ship a ready N>=3 block
+  for (let seed = 1; seed <= 20; seed++) {
+    let s = seed * 9973 + 17;
+    const rng = () => {
+      s = (s * 1664525 + 1013904223) >>> 0;
+      return s / 0x100000000;
+    };
+    const filled = fillEmptySpawn(createEmptyBoard(), rng);
+    for (let r = 0; r < ROWS; r++) {
+      for (let c = 0; c < COLS; c++) {
+        assert.ok(
+          filled[r][c].val >= 1 && filled[r][c].val <= 4,
+          `seed=${seed} val=${filled[r][c].val} out of [1,4]`
+        );
+      }
     }
+    assert.equal(
+      pickAutoMerge(filled),
+      null,
+      `seed=${seed} opening board should not contain a ready merge block`
+    );
   }
+});
+
+test('opening difficulty: random clicks on a fresh board rarely merge immediately', () => {
+  let merges = 0;
+  const trials = 40;
+  for (let seed = 100; seed < 100 + trials; seed++) {
+    let s = seed * 9973 + 17;
+    const rng = () => {
+      s = (s * 1664525 + 1013904223) >>> 0;
+      return s / 0x100000000;
+    };
+    const board = fillEmptySpawn(createEmptyBoard(), rng);
+    // pick a random cell, apply +1, see if N>=3
+    const r = Math.floor(rng() * ROWS);
+    const c = Math.floor(rng() * COLS);
+    board[r][c].val += 1;
+    const { cells } = bfsBlock(board, r, c);
+    if (cells.length >= MERGE_MIN) merges += 1;
+  }
+  // Opening is harder: majority of blind clicks should NOT score
+  assert.ok(merges <= trials * 0.35, `blind-click merge rate too high: ${merges}/${trials}`);
 });
 
 test('applyMerge upgrades center, removes members, uses mergeVal', () => {

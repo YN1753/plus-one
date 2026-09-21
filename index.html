@@ -2,194 +2,510 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>数字加1 · plusOne</title>
   <style>
     :root {
-      --bg: #0f1220;
-      --panel: #1a1f35;
-      --tile: #2a3152;
-      --tile-hot: #3d4670;
-      --ink: #f2f4ff;
-      --muted: #8b93b5;
-      --accent: #f5a524;
-      --accent-2: #6ee7b7;
-      --danger: #f87171;
+      /* 瓷白文房 */
+      --paper: #f2ede3;
+      --paper-deep: #e8e0d2;
+      --well: #ddd2bf;
+      --well-inset: #cfc2ab;
+      --ink: #1a1714;
+      --muted: #6b6560;
+      --hairline: #c4b8a4;
+      --seal: #b33a2b;
+      --seal-deep: #8f2c20;
+      --gold: #b8893a;
+      --shadow: rgba(26, 23, 20, 0.12);
+
+      /* 釉色阶：数值越高釉色越深 */
+      --g1: #d5e4db; --g1-fg: #2c4036; --g1-ring: #9bb8a8;
+      --g2: #b7d0c1; --g2-fg: #24382e; --g2-ring: #7fa893;
+      --g3: #8fb8a4; --g3-fg: #1c2e26; --g3-ring: #5f8f7a;
+      --g4: #6a9aab; --g4-fg: #102228; --g4-ring: #3d6b7c;
+      --g5: #4d7fa8; --g5-fg: #f4f0e8; --g5-ring: #2f5d8c;
+      --g6: #3d6394; --g6-fg: #f4f0e8; --g6-ring: #2a4a78;
+      --g7: #3d4d8c; --g7-fg: #f4f0e8; --g7-ring: #2a3670;
+      --g8: #5a3d8c; --g8-fg: #f4f0e8; --g8-ring: #432d6e;
+      --g9: #7a4a78; --g9-fg: #f4f0e8; --g9-ring: #5c355a;
+      --g10: #a06a3a; --g10-fg: #fff8ee; --g10-ring: #8a5628;
+      --gmax: #b33a2b; --gmax-fg: #fff6f0; --gmax-ring: #8f2c20;
+
       --board-size: min(92vw, 420px);
-      font-family: "SF Pro Text", "PingFang SC", "Segoe UI", system-ui, sans-serif;
+      --font-display: "Songti SC", "STSong", "Noto Serif SC", "SimSun", Georgia, serif;
+      --font-body: "PingFang SC", "Segoe UI", "Microsoft YaHei", system-ui, sans-serif;
+      --font-num: "DIN Alternate", "SF Pro Rounded", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+
+      font-family: var(--font-body);
+      color: var(--ink);
+      background: var(--paper);
     }
+
     * { box-sizing: border-box; }
+
     body {
       margin: 0;
       min-height: 100vh;
       display: grid;
       place-items: center;
       background:
-        radial-gradient(1200px 600px at 50% -10%, #243057 0%, transparent 60%),
-        var(--bg);
-      color: var(--ink);
+        radial-gradient(900px 480px at 50% -8%, #fffdf8 0%, transparent 55%),
+        repeating-linear-gradient(
+          0deg,
+          transparent,
+          transparent 3px,
+          rgba(26, 23, 20, 0.015) 3px,
+          rgba(26, 23, 20, 0.015) 4px
+        ),
+        var(--paper);
     }
+
     .wrap {
       width: min(94vw, 460px);
-      padding: 24px 16px 32px;
+      padding: 22px 16px 28px;
     }
+
+    /* 顶栏：细条，非导航 */
     header {
       display: flex;
-      align-items: baseline;
+      align-items: flex-end;
       justify-content: space-between;
-      margin-bottom: 14px;
+      gap: 12px;
+      margin-bottom: 16px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--hairline);
     }
+
     h1 {
       margin: 0;
-      font-size: 28px;
+      font-family: var(--font-display);
+      font-size: clamp(28px, 7vw, 34px);
       font-weight: 700;
-      letter-spacing: 0.02em;
+      letter-spacing: 0.06em;
+      line-height: 1.1;
     }
-    h1 span { color: var(--accent); }
+
+    h1 em {
+      font-style: normal;
+      color: var(--seal);
+    }
+
+    .brand-mark {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 2px;
+    }
+
+    .brand-mark .latin {
+      font-family: var(--font-num);
+      font-size: 11px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    .brand-mark .rule {
+      width: 28px;
+      height: 2px;
+      background: var(--seal);
+    }
+
     .sub {
+      margin-top: 4px;
       color: var(--muted);
       font-size: 12px;
+      letter-spacing: 0.02em;
     }
+
+    /* 账本式状态条：无圆角卡片堆 */
     .stats {
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 8px;
+      grid-template-columns: 1.2fr 0.9fr 1.4fr;
       margin-bottom: 14px;
+      border: 1px solid var(--hairline);
+      background: rgba(255, 253, 248, 0.45);
     }
+
     .stat {
-      background: var(--panel);
-      border-radius: 12px;
-      padding: 10px 12px;
-      border: 1px solid #2c3355;
+      padding: 10px 12px 8px;
+      border-right: 1px solid var(--hairline);
+      min-width: 0;
     }
+
+    .stat:last-child { border-right: 0; }
+
     .stat .label {
       display: block;
       color: var(--muted);
-      font-size: 11px;
+      font-size: 10px;
+      letter-spacing: 0.16em;
       margin-bottom: 2px;
     }
+
     .stat .value {
-      font-size: 20px;
+      font-family: var(--font-num);
+      font-size: 22px;
       font-weight: 700;
       font-variant-numeric: tabular-nums;
+      line-height: 1.15;
+      letter-spacing: 0.02em;
     }
+
+    .stat.score .value { color: var(--gold); }
+    .stat.combo .value.hot { color: var(--seal); }
+
     .energy-pips {
       display: flex;
-      gap: 4px;
-      margin-top: 6px;
-      min-height: 8px;
+      gap: 5px;
+      margin-top: 7px;
+      min-height: 10px;
+      align-items: center;
     }
+
     .pip {
-      width: 10px;
-      height: 8px;
-      border-radius: 2px;
-      background: #3a4268;
+      width: 9px;
+      height: 9px;
+      border-radius: 1px;
+      background: var(--well-inset);
+      border: 1px solid var(--hairline);
+      transform: rotate(45deg);
     }
-    .pip.on { background: var(--accent); }
+
+    .pip.on {
+      background: var(--seal);
+      border-color: var(--seal-deep);
+      box-shadow: 0 0 0 1px rgba(179, 58, 43, 0.15);
+    }
+
+    /* 棋盘：凹槽瓷盘 */
     .board-shell {
       position: relative;
       width: var(--board-size);
       height: var(--board-size);
       margin: 0 auto;
-      background: var(--panel);
-      border-radius: 16px;
-      padding: 8px;
-      border: 1px solid #2c3355;
-      box-shadow: 0 18px 50px rgba(0,0,0,.35);
+      padding: 10px;
+      background:
+        linear-gradient(160deg, var(--paper-deep), var(--well) 45%, var(--well-inset));
+      border: 1px solid var(--hairline);
+      box-shadow:
+        inset 0 2px 6px rgba(26, 23, 20, 0.12),
+        inset 0 -1px 0 rgba(255, 253, 248, 0.55),
+        0 10px 28px var(--shadow);
     }
+
+    .board-shell::before {
+      content: "";
+      position: absolute;
+      inset: 6px;
+      border: 1px solid rgba(26, 23, 20, 0.06);
+      pointer-events: none;
+    }
+
     .board {
+      position: relative;
+      z-index: 1;
       display: grid;
       grid-template-columns: repeat(5, 1fr);
       grid-template-rows: repeat(5, 1fr);
-      gap: 6px;
+      gap: 7px;
       width: 100%;
       height: 100%;
     }
+
     .tile {
-      border-radius: 10px;
-      background: var(--tile);
+      border-radius: 6px;
       display: grid;
       place-items: center;
+      font-family: var(--font-num);
       font-weight: 700;
-      font-size: clamp(16px, 4.5vw, 24px);
+      font-size: clamp(18px, 5vw, 26px);
+      font-variant-numeric: tabular-nums;
+      letter-spacing: 0.02em;
       cursor: pointer;
       user-select: none;
-      transition: transform .18s ease, background .18s ease, opacity .2s ease;
-      border: 1px solid #3a436d;
+      -webkit-tap-highlight-color: transparent;
+      color: var(--ink);
+      background: var(--well-inset);
+      border: 1px solid rgba(26, 23, 20, 0.1);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 253, 248, 0.35),
+        0 1px 2px rgba(26, 23, 20, 0.06);
+      transition:
+        transform 160ms ease,
+        box-shadow 160ms ease,
+        background 160ms ease,
+        color 160ms ease;
+      min-height: 44px;
     }
-    .tile:hover { background: var(--tile-hot); transform: translateY(-1px); }
+
+    .tile[data-val] {
+      box-shadow:
+        inset 0 1px 0 rgba(255, 253, 248, 0.4),
+        inset 0 0 0 1px var(--ring, transparent),
+        0 2px 4px rgba(26, 23, 20, 0.08);
+    }
+
+    .tile.empty {
+      background: transparent;
+      box-shadow:
+        inset 0 2px 4px rgba(26, 23, 20, 0.1),
+        inset 0 0 0 1px rgba(26, 23, 20, 0.05);
+      cursor: default;
+    }
+
+    .tile:not(.empty):hover {
+      transform: translateY(-1px);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 253, 248, 0.45),
+        inset 0 0 0 1px var(--ring, var(--hairline)),
+        0 4px 10px rgba(26, 23, 20, 0.12);
+    }
+
+    .tile:not(.empty):active { transform: translateY(0) scale(0.98); }
+
+    .tile:focus-visible {
+      outline: 2px solid var(--seal);
+      outline-offset: 2px;
+    }
+
     .tile.merged {
-      background: var(--accent);
-      color: #1a1200;
-      border-color: #ffc45a;
-      animation: pop .32s ease;
+      animation: seal-pop 360ms cubic-bezier(0.2, 0.9, 0.25, 1.2);
+      z-index: 2;
     }
-    .tile.spawned { animation: drop-in .28s ease; }
-    .tile.locked { cursor: default; opacity: .85; }
-    @keyframes pop {
+
+    .tile.merged.center {
+      background: var(--seal) !important;
+      color: #fff6f0 !important;
+      box-shadow:
+        0 0 0 2px rgba(255, 246, 240, 0.35),
+        0 4px 14px rgba(179, 58, 43, 0.35);
+    }
+
+    .tile.merged:not(.center) {
+      opacity: 0.55;
+      transform: scale(0.92);
+    }
+
+    .tile.spawned { animation: rise-in 300ms ease-out; }
+
+    .tile.locked:not(.empty) { cursor: default; }
+
+    .tile.bump { animation: bump 220ms ease; }
+
+    @keyframes seal-pop {
       0% { transform: scale(1); }
-      40% { transform: scale(1.12); }
+      35% { transform: scale(1.14); }
       100% { transform: scale(1); }
     }
-    @keyframes drop-in {
-      from { transform: translateY(-28px); opacity: 0; }
+
+    @keyframes rise-in {
+      from { transform: translateY(-22px); opacity: 0; }
       to { transform: translateY(0); opacity: 1; }
     }
+
+    @keyframes bump {
+      0% { transform: scale(1); }
+      40% { transform: scale(1.08); }
+      100% { transform: scale(1); }
+    }
+
+    /* 朱印 Combo */
+    .combo-flash {
+      position: absolute;
+      inset: 0;
+      z-index: 3;
+      display: grid;
+      place-items: center;
+      pointer-events: none;
+      opacity: 0;
+    }
+
+    .combo-flash.show { animation: stamp 720ms cubic-bezier(0.2, 0.85, 0.2, 1); }
+
+    .seal {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+      width: 96px;
+      height: 96px;
+      border: 3px solid var(--seal);
+      color: var(--seal);
+      background: rgba(242, 237, 227, 0.88);
+      box-shadow:
+        0 0 0 1px rgba(179, 58, 43, 0.2),
+        0 8px 24px rgba(179, 58, 43, 0.18);
+      transform: rotate(-8deg);
+    }
+
+    .seal .en {
+      font-family: var(--font-num);
+      font-size: 11px;
+      letter-spacing: 0.22em;
+      font-weight: 700;
+    }
+
+    .seal .n {
+      font-family: var(--font-display);
+      font-size: 28px;
+      font-weight: 700;
+      line-height: 1;
+    }
+
+    .seal .zh {
+      font-family: var(--font-display);
+      font-size: 12px;
+      letter-spacing: 0.28em;
+    }
+
+    @keyframes stamp {
+      0% { opacity: 0; transform: scale(1.35) rotate(-14deg); }
+      18% { opacity: 1; transform: scale(0.96) rotate(-8deg); }
+      30% { transform: scale(1) rotate(-8deg); }
+      70% { opacity: 1; }
+      100% { opacity: 0; transform: scale(1.05) rotate(-8deg); }
+    }
+
     .toast {
-      min-height: 22px;
+      min-height: 24px;
       margin-top: 12px;
       text-align: center;
-      color: var(--accent-2);
       font-size: 13px;
-      font-weight: 600;
+      font-weight: 500;
+      color: var(--muted);
+      letter-spacing: 0.02em;
     }
-    .toast.over { color: var(--danger); }
+
+    .toast.success { color: var(--gold); font-weight: 600; }
+    .toast.over { color: var(--seal); font-weight: 600; }
+
     .actions {
-      margin-top: 14px;
+      margin-top: 12px;
       display: flex;
       justify-content: center;
       gap: 10px;
     }
+
     button {
       appearance: none;
-      border: 0;
-      border-radius: 999px;
-      padding: 10px 18px;
-      font-weight: 700;
+      border: 1px solid var(--seal-deep);
+      border-radius: 2px;
+      padding: 11px 22px;
+      min-height: 44px;
+      font-family: var(--font-body);
+      font-weight: 600;
       font-size: 14px;
+      letter-spacing: 0.08em;
       cursor: pointer;
-      background: var(--accent);
-      color: #1a1200;
+      background: var(--seal);
+      color: #fff6f0;
+      box-shadow: 0 2px 0 var(--seal-deep);
+      transition: transform 120ms ease, box-shadow 120ms ease, background 120ms ease;
     }
-    button.ghost {
-      background: transparent;
-      color: var(--ink);
-      border: 1px solid #3a436d;
-    }
+
+    button:hover { background: var(--seal-deep); }
+    button:active { transform: translateY(1px); box-shadow: 0 1px 0 var(--seal-deep); }
+    button:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+
     .hint {
-      margin-top: 16px;
+      margin-top: 18px;
+      padding-top: 12px;
+      border-top: 1px solid var(--hairline);
       text-align: center;
       color: var(--muted);
       font-size: 12px;
-      line-height: 1.5;
+      line-height: 1.65;
     }
-    .combo-flash {
-      position: absolute;
+
+    .hint strong {
+      color: var(--ink);
+      font-weight: 600;
+    }
+
+    /* 结束遮罩 */
+    .overlay {
+      position: fixed;
       inset: 0;
+      z-index: 20;
+      display: none;
+      place-items: center;
+      padding: 24px;
+      background: rgba(26, 23, 20, 0.28);
+      backdrop-filter: blur(2px);
+    }
+
+    .overlay.show { display: grid; }
+
+    .over-card {
+      width: min(90vw, 320px);
+      padding: 28px 24px 22px;
+      text-align: center;
+      background: var(--paper);
+      border: 1px solid var(--hairline);
+      box-shadow: 0 18px 48px rgba(26, 23, 20, 0.22);
+    }
+
+    .over-card .stamp {
+      width: 64px;
+      height: 64px;
+      margin: 0 auto 14px;
       display: grid;
       place-items: center;
-      pointer-events: none;
-      font-size: 42px;
-      font-weight: 800;
-      color: var(--accent);
-      opacity: 0;
-      text-shadow: 0 8px 30px rgba(0,0,0,.45);
+      border: 2px solid var(--seal);
+      color: var(--seal);
+      font-family: var(--font-display);
+      font-size: 22px;
+      transform: rotate(-6deg);
     }
-    .combo-flash.show { animation: combo .7s ease; }
-    @keyframes combo {
-      0% { opacity: 0; transform: scale(.8); }
-      25% { opacity: 1; transform: scale(1.05); }
-      100% { opacity: 0; transform: scale(1.2); }
+
+    .over-card h2 {
+      margin: 0 0 8px;
+      font-family: var(--font-display);
+      font-size: 24px;
+      letter-spacing: 0.12em;
+    }
+
+    .over-card .final-score {
+      font-family: var(--font-num);
+      font-size: 40px;
+      font-weight: 700;
+      color: var(--gold);
+      font-variant-numeric: tabular-nums;
+      margin: 4px 0 6px;
+    }
+
+    .over-card .final-label {
+      color: var(--muted);
+      font-size: 12px;
+      letter-spacing: 0.16em;
+      margin-bottom: 18px;
+    }
+
+    .over-card button { width: 100%; }
+
+    @media (max-width: 375px) {
+      .wrap { padding: 16px 12px 22px; }
+      .stats { grid-template-columns: 1fr 0.85fr 1.25fr; }
+      .stat { padding: 8px; }
+      .stat .value { font-size: 18px; }
+      .board { gap: 5px; }
+      .tile { min-height: 40px; font-size: 17px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .tile,
+      .tile.merged,
+      .tile.spawned,
+      .tile.bump,
+      .combo-flash.show,
+      button {
+        animation: none !important;
+        transition: none !important;
+      }
     }
   </style>
 </head>
@@ -197,41 +513,55 @@
   <div class="wrap">
     <header>
       <div>
-        <h1>数字加<span>1</span></h1>
-        <div class="sub">点击 +1 · 同数正交相连 ≥3 合成 · 连锁得分</div>
+        <h1>数字加<em>1</em></h1>
+        <div class="sub">点击 +1 · 正交同数 ≥3 合成 · 连锁无耗</div>
+      </div>
+      <div class="brand-mark" aria-hidden="true">
+        <span class="latin">plusOne</span>
+        <span class="rule"></span>
       </div>
     </header>
 
-    <div class="stats">
-      <div class="stat">
+    <div class="stats" role="status" aria-live="polite">
+      <div class="stat score">
         <span class="label">得分</span>
         <div class="value" id="score">0</div>
       </div>
-      <div class="stat">
+      <div class="stat combo">
         <span class="label">连击</span>
         <div class="value" id="combo">0</div>
       </div>
       <div class="stat">
         <span class="label">体力</span>
         <div class="value" id="energy">5</div>
-        <div class="energy-pips" id="pips"></div>
+        <div class="energy-pips" id="pips" aria-hidden="true"></div>
       </div>
     </div>
 
     <div class="board-shell">
-      <div class="board" id="board"></div>
-      <div class="combo-flash" id="flash"></div>
+      <div class="board" id="board" role="grid" aria-label="数字棋盘 5×5"></div>
+      <div class="combo-flash" id="flash" aria-hidden="true"></div>
     </div>
 
-    <div class="toast" id="toast"></div>
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
     <div class="actions">
       <button id="resetBtn" type="button">重新开始</button>
     </div>
 
     <div class="hint">
-      仅上下左右连通。合成：score += N × val × 20，体力 +1（上限 5）。<br />
-      高分方块生成概率更低，避免死局。
+      <strong>合成</strong> score = N × 数值 × 20，体力 +1（上限 5）。<br />
+      开局数值更散，需主动凑齐 ≥3 连；仅上下左右相连。
+    </div>
+  </div>
+
+  <div class="overlay" id="overlay" hidden>
+    <div class="over-card" role="dialog" aria-modal="true" aria-labelledby="overTitle">
+      <div class="stamp" aria-hidden="true">终</div>
+      <h2 id="overTitle">本局结束</h2>
+      <div class="final-score" id="finalScore">0</div>
+      <div class="final-label">最终得分</div>
+      <button id="againBtn" type="button">再来一局</button>
     </div>
   </div>
 

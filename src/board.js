@@ -1,4 +1,4 @@
-import { COLS, ROWS, MERGE_MIN, DIRS } from './constants.js';
+import { COLS, ROWS, MERGE_MIN, DIRS, DEFAULT_SPAWN } from './constants.js';
 
 let nextCellId = 1;
 
@@ -36,27 +36,40 @@ export function findMaxMin(board) {
   return { maxVal, minVal };
 }
 
-/**
- * Dynamic spawn upper bound.
- * @param {number|null} maxVal
- */
-export function spawnUpper(maxVal) {
-  if (maxVal === null || maxVal === undefined) return 3;
-  return Math.max(3, maxVal - 3);
+export function normalizeSpawnOpts(opts = {}) {
+  return {
+    floor: opts.floor ?? DEFAULT_SPAWN.floor,
+    decay: opts.decay ?? DEFAULT_SPAWN.decay,
+    weightExp: opts.weightExp ?? DEFAULT_SPAWN.weightExp,
+    initialUpper: opts.initialUpper ?? DEFAULT_SPAWN.initialUpper,
+  };
 }
 
 /**
- * Inverse-weighted spawn: smaller values are more probable.
- * weight(v) = 1 / v
+ * Dynamic spawn upper bound.
+ * @param {number|null} maxVal
+ * @param {object} [opts] see normalizeSpawnOpts
+ */
+export function spawnUpper(maxVal, opts = {}) {
+  const { floor, decay } = normalizeSpawnOpts(opts);
+  if (maxVal === null || maxVal === undefined) return floor;
+  return Math.max(floor, maxVal - decay);
+}
+
+/**
+ * Inverse-weighted spawn: smaller values more probable, not extreme.
+ * weight(v) = 1 / v^weightExp
  * @param {number|null} maxVal
  * @param {() => number} rng returns [0, 1)
+ * @param {object} [opts]
  */
-export function spawnValue(maxVal, rng = Math.random) {
-  const upper = spawnUpper(maxVal);
+export function spawnValue(maxVal, rng = Math.random, opts = {}) {
+  const { weightExp } = normalizeSpawnOpts(opts);
+  const upper = spawnUpper(maxVal, opts);
   let total = 0;
   const weights = [];
   for (let v = 1; v <= upper; v++) {
-    const w = 1 / v;
+    const w = 1 / Math.pow(v, weightExp);
     weights.push(w);
     total += w;
   }
@@ -66,6 +79,73 @@ export function spawnValue(maxVal, rng = Math.random) {
     if (roll < 0) return i + 1;
   }
   return upper;
+}
+
+/** Fair multiset of values in [1, upper] totaling n. */
+function buildBalancedBag(n, upper) {
+  const bag = [];
+  const base = Math.floor(n / upper);
+  let rem = n % upper;
+  for (let v = 1; v <= upper; v++) {
+    const count = base + (rem > 0 ? 1 : 0);
+    if (rem > 0) rem -= 1;
+    for (let i = 0; i < count; i++) bag.push(v);
+  }
+  return bag;
+}
+
+function shuffleInPlace(arr, rng) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    const tmp = arr[i];
+    arr[i] = arr[j];
+    arr[j] = tmp;
+  }
+  return arr;
+}
+
+function neighborValueSet(board, r, c) {
+  const set = new Set();
+  for (const [dr, dc] of DIRS) {
+    const nr = r + dr;
+    const nc = c + dc;
+    if (inBounds(nr, nc) && board[nr][nc]) set.add(board[nr][nc].val);
+  }
+  return set;
+}
+
+/**
+ * Opening difficulty: eliminate any ready N>=3 block on a freshly filled board.
+ * Does not inflate MaxVal beyond spawn cap when avoidable.
+ */
+function breakOpeningTriples(board, rng, spawnOpts) {
+  for (let pass = 0; pass < 32; pass++) {
+    const found = pickAutoMerge(board);
+    if (!found) return true;
+    const { r, c } = found.center;
+    const oldVal = found.val;
+    const { maxVal } = findMaxMin(board);
+    const cap = spawnUpper(maxVal, spawnOpts);
+    const blocked = neighborValueSet(board, r, c);
+    let nextVal = null;
+    for (let v = 1; v <= cap; v++) {
+      if (v !== oldVal && !blocked.has(v)) {
+        nextVal = v;
+        break;
+      }
+    }
+    if (nextVal == null) {
+      for (let v = 1; v <= cap; v++) {
+        if (v !== oldVal) {
+          nextVal = v;
+          break;
+        }
+      }
+    }
+    if (nextVal == null) nextVal = oldVal === 1 ? 2 : 1;
+    board[r][c] = createCell(nextVal, false);
+  }
+  return pickAutoMerge(board) == null;
 }
 
 /**
@@ -178,7 +258,8 @@ export function pickAutoMerge(board) {
  * Column-wise gravity: survivors sink; empty tops spawn via algorithm.
  * Mutates a working board copy internally and returns next board + animation data.
  */
-export function computeGravity(board, rng = Math.random) {
+export function computeGravity(board, rng = Math.random, spawnOpts = {}) {
+  const opts = normalizeSpawnOpts(spawnOpts);
   const next = cloneBoard(board);
   const moves = [];
   const spawns = [];
@@ -190,10 +271,8 @@ export function computeGravity(board, rng = Math.random) {
       if (cell) survivors.push({ fromRow: r, cell });
     }
 
-    // Clear column
     for (let r = 0; r < ROWS; r++) next[r][c] = null;
 
-    // Sink survivors to bottom, preserving relative order
     let writeRow = ROWS - 1;
     for (const { fromRow, cell } of survivors) {
       cell.isMerged = false;
@@ -209,19 +288,13 @@ export function computeGravity(board, rng = Math.random) {
       writeRow--;
     }
 
-    // Fill remaining top empty cells
     const emptyCount = writeRow + 1;
     const { maxVal } = findMaxMin(next);
-    // Use a local upper based on current column fill + existing board values
-    // Spec: MaxVal of whole board. During column fill, recompute is fine.
     for (let i = 0; i < emptyCount; i++) {
       const row = writeRow - i;
-      const val = spawnValue(maxVal, rng);
+      const val = spawnValue(maxVal, rng, opts);
       const cell = createCell(val, false);
       next[row][c] = cell;
-      // Falling stack above the board: lowest empty cell starts just above (row -1),
-      // higher empty cells start higher up so they drop in as one column.
-      // i=0 → lowest empty row; i=emptyCount-1 → topmost empty row
       const spawnFromRow = -1 - i;
       spawns.push({
         row,
@@ -237,18 +310,35 @@ export function computeGravity(board, rng = Math.random) {
 }
 
 /**
- * Fill a fully empty board (or remaining nulls) using spawn algorithm.
+ * Fill empty cells. Empty boards use a balanced bag + opening anti-triple
+ * pass so early random clicks do not instantly score.
  */
-export function fillEmptySpawn(board, rng = Math.random) {
+export function fillEmptySpawn(board, rng = Math.random, spawnOpts = {}) {
+  const opts = normalizeSpawnOpts(spawnOpts);
   const next = cloneBoard(board);
   const { maxVal } = findMaxMin(next);
-  for (let r = 0; r < ROWS; r++) {
-    for (let c = 0; c < COLS; c++) {
-      if (!next[r][c]) {
-        next[r][c] = createCell(spawnValue(maxVal, rng), false);
+  const opening = maxVal === null;
+
+  if (opening) {
+    const upper = opts.initialUpper;
+    const bag = shuffleInPlace(buildBalancedBag(ROWS * COLS, upper), rng);
+    let i = 0;
+    for (let r = 0; r < ROWS; r++) {
+      for (let c = 0; c < COLS; c++) {
+        if (!next[r][c]) next[r][c] = createCell(bag[i++], false);
+      }
+    }
+  } else {
+    for (let r = 0; r < ROWS; r++) {
+      for (let c = 0; c < COLS; c++) {
+        if (!next[r][c]) {
+          next[r][c] = createCell(spawnValue(maxVal, rng, opts), false);
+        }
       }
     }
   }
+
+  if (opening) breakOpeningTriples(next, rng, opts);
   return next;
 }
 
@@ -284,6 +374,6 @@ export function applyMerge(board, cells, centerRC) {
   };
 }
 
-export function createBoardFilled(rng = Math.random) {
-  return fillEmptySpawn(createEmptyBoard(), rng);
+export function createBoardFilled(rng = Math.random, spawnOpts = {}) {
+  return fillEmptySpawn(createEmptyBoard(), rng, spawnOpts);
 }

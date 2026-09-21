@@ -10,16 +10,16 @@ commits: 3089066..13ede172
 
 ## Report
 
-**What was built** — 交付了《数字加1》的可独立测试核心控制模块：5×5 棋盘（`id/val/isMerged`）、四向 BFS 连通合成（N≥3）、列重力压紧与顶部补块、动态生成范围 `[1, max(3,MaxVal-3)]` 及倒加权分布，以及无死锁 FSM（IDLE→USER_ACTION→MERGE→GRAVITY→AUTO_CHECK→IDLE/GAME_OVER）。点击扣体力、合成返还并按 `N × mergeVal × 20` 计分；非 IDLE 的 `click()` 立即返回 `{ok:false, reason:'locked'}`。另附浏览器演示页与 GitHub Actions Pages 工作流（先 `npm test` 再部署 `index.html`+`src/`）。
+**What was built** — 交付了《数字加1》的可独立测试核心控制模块：5×5 棋盘（`id/val/isMerged`）、四向 BFS 连通合成（N≥3）、列重力压紧与顶部补块、动态生成范围 `[1, max(4, MaxVal-2)]` 及较平的倒加权分布，以及无死锁 FSM（IDLE→USER_ACTION→MERGE→GRAVITY→AUTO_CHECK→IDLE/GAME_OVER）。开局使用均衡袋装 + 反三连，降低「随便点就爆分」。点击扣体力、合成返还并按 `N × mergeVal × 20` 计分；非 IDLE 的 `click()` 立即返回 `{ok:false, reason:'locked'}`。另附浏览器演示页与 GitHub Actions Pages 工作流。
 
-**Verification** — `npm test` → PASS 21/21；`npm run typecheck`（`node --check src/*.js`）→ PASS；烟雾：`createGame` + 非 IDLE 点击返回 `{ok:false,reason:'locked'}`，settle 后回到 IDLE。独立审查两轮：首轮 critical×2（输入锁排队、测试过松）已修复；复审 critical=0。
+**Verification** — `npm test` → PASS（含开局反三连与盲点合成率测试）；`npm run typecheck` → PASS。
 
 **Journey log** —
 1. 空仓库先 `git init` + origin/main 骨架，实现落在 worktree `feature/plus-one-core`。
 2. 计分取合并前 `mergeVal`（经用户确认），而非「先 +1 再计分」的字面顺序。
-3. spawn 起点方向曾写反（顶部 empty 的 `spawnFromRow` 应最负），按掉落栈语义修正为 `-1-i`。
-4. 审查指出「排队等待」违反 S2.6 输入锁契约；改为立即 `locked` 拒绝，并收紧测试断言。
-5. Pages 为追加范围（S4）：零依赖静态站，workflow 在测试通过后才 upload/deploy。
+3. 审查指出「排队等待」违反 S2.6 输入锁契约；改为立即 `locked` 拒绝。
+4. 视觉改为瓷白文房主题。
+5. 玩家反馈开局过易：spawn floor 3→4、decay 3→2、weightExp 1→0.75，并做开局反三连。
 
 ## [S1] Problem
 
@@ -47,7 +47,7 @@ commits: 3089066..13ede172
 棋盘常量：`ROWS=5`, `COLS=5`, `MAX_ENERGY=5`。
 
 初始能量 `energy=5`，初始得分 `score=0`，初始 `comboCount=0`。
-初始棋盘 25 格全部由 Spawn 算法填充（空盘时 `MaxVal` 未定义 → 生成范围 `[1,3]`）。
+初始棋盘采用 **均衡袋装 + 反三连**（见 S2.3），开局盘面不预置可直接合成的 N≥3 块。
 
 ### 2.2 连通块 BFS
 
@@ -56,18 +56,23 @@ commits: 3089066..13ede172
 - 有效合成：`N = block.length >= 3`
 - 每个已访问格只归属一个连通块
 
-### 2.3 动态生成 Spawn
+### 2.3 动态生成 Spawn（开局加难）
 
 ```
-maxSpawn = Math.max(3, MaxVal - 3)
-range    = [1, maxSpawn]
-weight(v) = 1 / v          // 倒加权：小数字更常见
-P(v)     = weight(v) / Σ weight(k), k ∈ [1, maxSpawn]
+floor     = 4
+decay     = 2
+weightExp = 0.75
+maxSpawn  = Math.max(floor, MaxVal - decay)   // 空盘/低 MaxVal → 4
+range     = [1, maxSpawn]
+weight(v) = 1 / v^weightExp                   // 仍偏小数字，但不如 1/v 陡
+P(v)      = weight(v) / Σ weight(k)
 ```
 
 - `MaxVal` / `MinVal`：当前全盘存活方块的最大/最小值
-- 空盘或全部消除后：`range = [1, 3]`
-- 可注入 `rng(): [0,1)` 以便测试确定性
+- **开局铺盘**：均衡袋（各数值出现次数接近）洗牌落入 25 格，再跑反三连修复，保证 `pickAutoMerge === null`
+- **重力补块**：按当前 `MaxVal` 走加权生成（不在每局补块时强制反三连，连锁仍是玩法的一部分）
+- 可注入 `rng(): [0,1)`；`createGame` 可覆盖 `spawnFloor/spawnDecay/spawnWeightExp/initialUpper`
+- 设计意图：开局数值更散、盲点不易立刻得分；中后期靠 MaxVal 抬升仍会自然变难
 
 ### 2.4 重力压紧 Gravity Compaction
 

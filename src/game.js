@@ -14,6 +14,7 @@ import {
   computeGravity,
   createBoardFilled,
   inBounds,
+  normalizeSpawnOpts,
   pickAutoMerge,
 } from './board.js';
 
@@ -40,14 +41,24 @@ function defaultRng() {
  * @param {() => number} [options.rng]
  * @param {object} [options.hooks] animation callbacks; must resolve when done
  * @param {number} [options.maxChainGuard]
+ * @param {number} [options.spawnFloor] min spawn upper (default 4)
+ * @param {number} [options.spawnDecay] MaxVal - decay (default 2)
+ * @param {number} [options.spawnWeightExp] inverse-weight exponent (default 0.75)
+ * @param {number} [options.initialUpper] opening bag upper (default 4)
  */
 export function createGame(options = {}) {
   const rng = options.rng ?? defaultRng;
   const hooks = options.hooks ?? {};
   const maxChainGuard = options.maxChainGuard ?? MAX_CHAIN_GUARD;
+  const spawnOpts = normalizeSpawnOpts({
+    floor: options.spawnFloor,
+    decay: options.spawnDecay,
+    weightExp: options.spawnWeightExp,
+    initialUpper: options.initialUpper,
+  });
 
   let state = STATE.IDLE;
-  let board = createBoardFilled(rng);
+  let board = createBoardFilled(rng, spawnOpts);
   let energy = MAX_ENERGY;
   let score = 0;
   let comboCount = 0;
@@ -144,7 +155,7 @@ export function createGame(options = {}) {
   }
 
   async function runGravity() {
-    const { board: next, moves, spawns } = computeGravity(board, rng);
+    const { board: next, moves, spawns } = computeGravity(board, rng, spawnOpts);
     board = next;
     lastGravity = { moves, spawns };
     emit();
@@ -261,7 +272,7 @@ export function createGame(options = {}) {
 
   function reset() {
     state = STATE.IDLE;
-    board = createBoardFilled(rng);
+    board = createBoardFilled(rng, spawnOpts);
     energy = MAX_ENERGY;
     score = 0;
     comboCount = 0;

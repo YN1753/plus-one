@@ -1,4 +1,14 @@
-export { ROWS, COLS, MAX_ENERGY, MERGE_MIN, SCORE_FACTOR, STATE, DIRS, MAX_CHAIN_GUARD } from './constants.js';
+export {
+  ROWS,
+  COLS,
+  MAX_ENERGY,
+  MERGE_MIN,
+  SCORE_FACTOR,
+  STATE,
+  DIRS,
+  MAX_CHAIN_GUARD,
+  DEFAULT_SPAWN,
+} from './constants.js';
 export {
   bfsBlock,
   cloneBoard,
@@ -8,6 +18,7 @@ export {
   createEmptyBoard,
   fillEmptySpawn,
   findMaxMin,
+  normalizeSpawnOpts,
   pickAutoMerge,
   pickChainCenter,
   resetCellIds,
