@@ -1,0 +1,11 @@
+{
+  "name": "plus-one",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "数字加1 — puzzle merge game core logic",
+  "scripts": {
+    "test": "node --test tests/",
+    "typecheck": "node --check src/*.js"
+  }
+}
