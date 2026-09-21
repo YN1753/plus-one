@@ -16,6 +16,7 @@ import {
   inBounds,
   normalizeSpawnOpts,
   pickAutoMerge,
+  stabilizeBoard,
 } from './board.js';
 
 function resolveHook(hooks, name, payload) {
@@ -171,7 +172,9 @@ export function createGame(options = {}) {
   async function runAutoCheck() {
     chainDepth += 1;
     if (chainDepth > maxChainGuard) {
+      // 连锁过长：无得分打散残余三连，避免十几连击刷屏
       degraded = true;
+      stabilizeBoard(board, rng, spawnOpts);
       comboCount = 0;
       if (energy === 0) await enterGameOver();
       else {

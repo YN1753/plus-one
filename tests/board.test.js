@@ -136,12 +136,17 @@ test('computeGravity: survivors sink, order preserved, spawns fill top', () => {
   ]);
   const { board: next, moves, spawns } = computeGravity(board, () => 0);
 
-  // Column 0: 2,2 survive at rows 3,4; 3 nulls spawn at 0..2
+  // Column 0: survivors 2,2 at rows 3,4; anti-cluster spawns diversify tops
   assert.equal(next[4][0].val, 2);
   assert.equal(next[3][0].val, 2);
-  assert.equal(next[2][0].val, 1); // rng=0 → spawn 1
-  assert.equal(next[1][0].val, 1);
+  // row2: avoid below=2 → first sample 1
+  assert.equal(next[2][0].val, 1);
+  // row1: avoid below=1 → fallback 2 (rng always 0)
+  assert.equal(next[1][0].val, 2);
+  // row0: avoid below=2 → 1
   assert.equal(next[0][0].val, 1);
+  // no three-in-a-row of same value in this column among spawns+survivors path
+  assert.ok(next[2][0].val !== next[3][0].val);
 
   // Column 1: 3,3 at bottom
   assert.equal(next[4][1].val, 3);

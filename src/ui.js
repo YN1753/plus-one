@@ -187,7 +187,9 @@ const game = createGame({
         mergedIds,
         centerId: center.id,
       });
-      setToast(`合成 ${N} × ${mergeVal} → ${mergeVal + 1}　+${gained ?? N * mergeVal * 20}`, 'success');
+      const gainedPts = gained ?? N * mergeVal * 20;
+      const comboPrefix = combo >= 2 ? `×${combo} 连击　` : '';
+      setToast(`${comboPrefix}合成 ${N} × ${mergeVal} → ${mergeVal + 1}　+${gainedPts}`, 'success');
       if (combo >= 2) showSeal(combo);
       await delay(320);
     },

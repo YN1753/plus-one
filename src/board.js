@@ -42,6 +42,7 @@ export function normalizeSpawnOpts(opts = {}) {
     decay: opts.decay ?? DEFAULT_SPAWN.decay,
     weightExp: opts.weightExp ?? DEFAULT_SPAWN.weightExp,
     initialUpper: opts.initialUpper ?? DEFAULT_SPAWN.initialUpper,
+    maxSamePerWave: opts.maxSamePerWave ?? DEFAULT_SPAWN.maxSamePerWave,
   };
 }
 
@@ -255,6 +256,45 @@ export function pickAutoMerge(board) {
 }
 
 /**
+ * Choose a spawn value that avoids orth-neighbors and per-wave duplicates,
+ * so gravity refills do not instantly rebuild huge same-value regions.
+ */
+export function pickSpawnAvoiding(board, row, col, maxVal, rng, opts, waveCounts) {
+  const o = normalizeSpawnOpts(opts);
+  const avoid = new Set();
+  const neighbors = [
+    [row + 1, col],
+    [row - 1, col],
+    [row, col - 1],
+    [row, col + 1],
+  ];
+  for (const [nr, nc] of neighbors) {
+    if (inBounds(nr, nc) && board[nr][nc]) avoid.add(board[nr][nc].val);
+  }
+
+  const upper = spawnUpper(maxVal, o);
+  const maxSame = Math.max(1, o.maxSamePerWave);
+  const allowed = (v) => {
+    if (avoid.has(v)) return false;
+    if (waveCounts && (waveCounts.get(v) || 0) >= maxSame) return false;
+    return true;
+  };
+
+  let val = spawnValue(maxVal, rng, o);
+  for (let i = 0; i < 10; i++) {
+    if (allowed(val)) return val;
+    val = spawnValue(maxVal, rng, o);
+  }
+  for (let v = 1; v <= upper; v++) {
+    if (allowed(v)) return v;
+  }
+  for (let v = 1; v <= upper; v++) {
+    if (!avoid.has(v)) return v;
+  }
+  return upper;
+}
+
+/**
  * Column-wise gravity: survivors sink; empty tops spawn via algorithm.
  * Mutates a working board copy internally and returns next board + animation data.
  */
@@ -263,6 +303,8 @@ export function computeGravity(board, rng = Math.random, spawnOpts = {}) {
   const next = cloneBoard(board);
   const moves = [];
   const spawns = [];
+  /** @type {Map<number, number>} */
+  const waveCounts = new Map();
 
   for (let c = 0; c < COLS; c++) {
     const survivors = [];
@@ -292,7 +334,8 @@ export function computeGravity(board, rng = Math.random, spawnOpts = {}) {
     const { maxVal } = findMaxMin(next);
     for (let i = 0; i < emptyCount; i++) {
       const row = writeRow - i;
-      const val = spawnValue(maxVal, rng, opts);
+      const val = pickSpawnAvoiding(next, row, c, maxVal, rng, opts, waveCounts);
+      waveCounts.set(val, (waveCounts.get(val) || 0) + 1);
       const cell = createCell(val, false);
       next[row][c] = cell;
       const spawnFromRow = -1 - i;
@@ -307,6 +350,43 @@ export function computeGravity(board, rng = Math.random, spawnOpts = {}) {
   }
 
   return { board: next, moves, spawns };
+}
+
+/**
+ * Break leftover N>=3 blocks without score/energy (chain overflow safety).
+ * Mutates board in place. Returns number of forced breaks.
+ */
+export function stabilizeBoard(board, rng = Math.random, spawnOpts = {}) {
+  const opts = normalizeSpawnOpts(spawnOpts);
+  let breaks = 0;
+  for (let pass = 0; pass < 24; pass++) {
+    const found = pickAutoMerge(board);
+    if (!found) break;
+    const { r, c } = found.center;
+    const oldVal = found.val;
+    const { maxVal } = findMaxMin(board);
+    const cap = spawnUpper(maxVal, opts);
+    const blocked = neighborValueSet(board, r, c);
+    let nextVal = null;
+    for (let v = 1; v <= cap; v++) {
+      if (v !== oldVal && !blocked.has(v)) {
+        nextVal = v;
+        break;
+      }
+    }
+    if (nextVal == null) {
+      for (let v = 1; v <= cap; v++) {
+        if (v !== oldVal) {
+          nextVal = v;
+          break;
+        }
+      }
+    }
+    if (nextVal == null) nextVal = oldVal === 1 ? 2 : 1;
+    board[r][c] = createCell(nextVal, false);
+    breaks += 1;
+  }
+  return breaks;
 }
 
 /**

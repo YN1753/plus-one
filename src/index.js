@@ -21,9 +21,11 @@ export {
   normalizeSpawnOpts,
   pickAutoMerge,
   pickChainCenter,
+  pickSpawnAvoiding,
   resetCellIds,
   spawnUpper,
   spawnValue,
+  stabilizeBoard,
   applyMerge,
 } from './board.js';
 export { createGame } from './game.js';

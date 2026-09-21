@@ -427,3 +427,68 @@ test('click on empty cell invalid', async () => {
   assert.equal(res.ok, false);
   assert.equal(res.reason, 'invalid_cell');
 });
+
+test('bot play: combo should stay modest (not 10+ every run)', async () => {
+  const maxCombos = [];
+  for (let seed = 1; seed <= 40; seed++) {
+    let s = seed * 9973 + 31;
+    const rng = () => {
+      s = (s * 1664525 + 1013904223) >>> 0;
+      return s / 0x100000000;
+    };
+    let localMax = 0;
+    const game = createGame({
+      rng,
+      hooks: {
+        onMerge({ combo }) {
+          if (combo > localMax) localMax = combo;
+        },
+      },
+    });
+    for (let step = 0; step < 24; step++) {
+      if (game.getState() === STATE.GAME_OVER) break;
+      if (game.getState() !== STATE.IDLE) break;
+      const board = game.getBoard();
+      const r = Math.floor(rng() * ROWS);
+      const c = Math.floor(rng() * COLS);
+      if (!board[r][c]) continue;
+      await game.click(r, c);
+    }
+    maxCombos.push(localMax);
+  }
+  const avg = maxCombos.reduce((a, b) => a + b, 0) / maxCombos.length;
+  const overTen = maxCombos.filter((v) => v >= 10).length;
+  const hardCap = Math.max(...maxCombos);
+  // Guard is 5 chain steps + 1 click merge => theoretical max combo 6
+  assert.ok(hardCap <= 6, `combo exceeded chain guard: max=${hardCap} all=${maxCombos.join(',')}`);
+  assert.ok(overTen === 0, `10+ combos appeared in ${overTen}/40 runs`);
+  assert.ok(avg <= 3.5, `average max-combo too high: ${avg.toFixed(2)}`);
+});
+
+test('gravity refill avoids stacking identical orth-neighbors when possible', async () => {
+  resetCellIds(1);
+  const { computeGravity, createCell, createEmptyBoard } = await import('../src/board.js');
+  const board = createEmptyBoard();
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      board[r][c] = createCell(20 + r * 10 + c);
+    }
+  }
+  // Clear entire top 3 rows to force many spawns
+  for (let r = 0; r < 3; r++) {
+    for (let c = 0; c < COLS; c++) board[r][c] = null;
+  }
+  // rng biased toward always 1 — anti-cluster must still diversify
+  const { board: next } = computeGravity(board, () => 0.01);
+  let badPairs = 0;
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      const v = next[r][c]?.val;
+      if (v == null) continue;
+      if (next[r][c + 1] && next[r][c + 1].val === v) badPairs += 1;
+      if (next[r + 1]?.[c] && next[r + 1][c].val === v) badPairs += 1;
+    }
+  }
+  // Without anti-cluster, biased rng would create many equal orth pairs
+  assert.ok(badPairs <= 8, `too many equal orth pairs after refill: ${badPairs}`);
+});

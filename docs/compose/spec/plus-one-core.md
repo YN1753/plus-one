@@ -56,23 +56,21 @@ commits: 3089066..13ede172
 - 有效合成：`N = block.length >= 3`
 - 每个已访问格只归属一个连通块
 
-### 2.3 动态生成 Spawn（开局加难）
+### 2.3 动态生成 Spawn（开局加难 + 控连锁）
 
 ```
 floor     = 4
 decay     = 2
-weightExp = 0.75
-maxSpawn  = Math.max(floor, MaxVal - decay)   // 空盘/低 MaxVal → 4
+weightExp = 0.55
+maxSpawn  = Math.max(floor, MaxVal - decay)
 range     = [1, maxSpawn]
-weight(v) = 1 / v^weightExp                   // 仍偏小数字，但不如 1/v 陡
-P(v)      = weight(v) / Σ weight(k)
+weight(v) = 1 / v^weightExp
 ```
 
-- `MaxVal` / `MinVal`：当前全盘存活方块的最大/最小值
-- **开局铺盘**：均衡袋（各数值出现次数接近）洗牌落入 25 格，再跑反三连修复，保证 `pickAutoMerge === null`
-- **重力补块**：按当前 `MaxVal` 走加权生成（不在每局补块时强制反三连，连锁仍是玩法的一部分）
-- 可注入 `rng(): [0,1)`；`createGame` 可覆盖 `spawnFloor/spawnDecay/spawnWeightExp/initialUpper`
-- 设计意图：开局数值更散、盲点不易立刻得分；中后期靠 MaxVal 抬升仍会自然变难
+- 开局：均衡袋装 + 反三连，保证 `pickAutoMerge === null`
+- **重力补块反扎堆**：新格避免与正交邻居同值；同一波补块同一数值软上限 `maxSamePerWave=2`
+- **连锁上限** `MAX_CHAIN_GUARD=5`（点击合成之外最多 5 次 AUTO 合成）；超限后 `stabilizeBoard` 无得分打散残余三连
+- 设计意图：避免「补块一片 1/2 → 全局扫描连环吃」导致十几连击
 
 ### 2.4 重力压紧 Gravity Compaction
 
