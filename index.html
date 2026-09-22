@@ -1,3 +1,4 @@
+<!-- AI生成 -->
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -282,18 +283,19 @@
       box-shadow:
         0 0 0 2px rgba(255, 246, 240, 0.35),
         0 4px 14px rgba(179, 58, 43, 0.35);
+      animation: none;
     }
 
     .tile.merged:not(.center) {
-      opacity: 0.55;
-      transform: scale(0.92);
+      opacity: 0.45;
+      transform: scale(0.9);
     }
 
     .tile.spawned { animation: rise-in 300ms ease-out; }
 
     .tile.locked:not(.empty) { cursor: default; }
 
-    .tile.bump { animation: bump 220ms ease; }
+    .tile.bump { animation: bump 180ms ease; }
 
     @keyframes seal-pop {
       0% { transform: scale(1); }
@@ -312,62 +314,61 @@
       100% { transform: scale(1); }
     }
 
-    /* 朱印 Combo */
+    /* 朱印 Combo — 贴在棋盘右上角外侧，不挡格子 */
     .combo-flash {
       position: absolute;
-      inset: 0;
-      z-index: 3;
-      display: grid;
-      place-items: center;
+      top: -10px;
+      right: -10px;
+      z-index: 4;
       pointer-events: none;
       opacity: 0;
     }
 
-    .combo-flash.show { animation: stamp 720ms cubic-bezier(0.2, 0.85, 0.2, 1); }
+    .combo-flash.show { animation: stamp 520ms cubic-bezier(0.2, 0.85, 0.2, 1); }
 
     .seal {
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 2px;
-      width: 96px;
-      height: 96px;
-      border: 3px solid var(--seal);
+      gap: 0;
+      width: 56px;
+      height: 56px;
+      border: 2px solid var(--seal);
       color: var(--seal);
-      background: rgba(242, 237, 227, 0.88);
+      background: rgba(242, 237, 227, 0.94);
       box-shadow:
-        0 0 0 1px rgba(179, 58, 43, 0.2),
-        0 8px 24px rgba(179, 58, 43, 0.18);
+        0 0 0 1px rgba(179, 58, 43, 0.18),
+        0 4px 12px rgba(179, 58, 43, 0.16);
       transform: rotate(-8deg);
     }
 
     .seal .en {
       font-family: var(--font-num);
-      font-size: 11px;
-      letter-spacing: 0.22em;
+      font-size: 8px;
+      letter-spacing: 0.14em;
       font-weight: 700;
     }
 
     .seal .n {
       font-family: var(--font-display);
-      font-size: 28px;
+      font-size: 18px;
       font-weight: 700;
-      line-height: 1;
+      line-height: 1.05;
     }
 
     .seal .zh {
       font-family: var(--font-display);
-      font-size: 12px;
-      letter-spacing: 0.28em;
+      font-size: 9px;
+      letter-spacing: 0.16em;
     }
 
     @keyframes stamp {
-      0% { opacity: 0; transform: scale(1.35) rotate(-14deg); }
-      18% { opacity: 1; transform: scale(0.96) rotate(-8deg); }
-      30% { transform: scale(1) rotate(-8deg); }
-      70% { opacity: 1; }
-      100% { opacity: 0; transform: scale(1.05) rotate(-8deg); }
+      0% { opacity: 0; transform: scale(1.2) rotate(-12deg); }
+      15% { opacity: 1; transform: scale(0.98) rotate(-8deg); }
+      28% { transform: scale(1) rotate(-8deg); }
+      75% { opacity: 1; }
+      100% { opacity: 0; transform: scale(1.04) rotate(-8deg); }
     }
 
     .toast {
@@ -510,6 +511,8 @@
   </style>
 </head>
 <body>
+<p data-aigc-mark="1" style="margin:0 0 8px;font-size:10px;line-height:1.3;color:#6b6560;font-weight:400;">AI生成</p>
+
   <div class="wrap">
     <header>
       <div>

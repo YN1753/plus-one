@@ -179,7 +179,7 @@ const game = createGame({
     async onUserIncrement({ r, c, snapshot }) {
       renderBoard(snapshot.board, { bump: { r, c } });
       tileEls[r * 5 + c]?.classList.add('bump');
-      await delay(160);
+      await delay(120);
     },
     async onMerge({ center, members, N, mergeVal, combo, gained, snapshot }) {
       const mergedIds = [center.id, ...members.map((m) => m.id)];
@@ -191,11 +191,12 @@ const game = createGame({
       const comboPrefix = combo >= 2 ? `×${combo} 连击　` : '';
       setToast(`${comboPrefix}合成 ${N} × ${mergeVal} → ${mergeVal + 1}　+${gainedPts}`, 'success');
       if (combo >= 2) showSeal(combo);
-      await delay(320);
+      // 更短：看清中心升级即可，不长时间压住后续掉落
+      await delay(200);
     },
     async onGravity({ spawns, snapshot }) {
       renderBoard(snapshot.board, { spawnedIds: spawns.map((s) => s.id) });
-      await delay(240);
+      await delay(180);
     },
     async onGameOver(snapshot) {
       renderBoard(snapshot.board);
